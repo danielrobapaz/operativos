@@ -31,6 +31,7 @@ void add_tweet(User *user, Tweets_List *twt_list);
 void follow_user(User *user, Hash_Table *table);
 Tweet *create_tweet(char *username);
 void print_tweet(Tweet *Tweet);
+char *hash_password(char *password);
 
 int main() {
     char *input, *user, *pswd, *twt, *prompt;
@@ -132,9 +133,18 @@ int login_verify(char *user, char *pwd, Hash_Table *table) {
     if (is_in_hash_table(table, user)) {
         /* Check if password matches*/
         User *User = hash_search(table, user);
-        if (!strcmp(pwd, User->Password)) {
+        if (!strcmp(pwd, hash_password(User->Password))) {
             return 0;
         } else {
+            int i = 0;
+            char *hashed_pwd = hash_password(pwd);
+            printf("contraseña hasheada: ");
+            while (i < strlen(pwd)) {
+                printf("%c", hashed_pwd[i]);
+                i++;
+            }
+            printf(".\n");
+
             printf("Incorrect password. Try again\n");
             return 1;
         }
@@ -158,6 +168,8 @@ void add_to_table(char *user, char *pwd, Hash_Table *table) {
     User *new_user = malloc(sizeof(User));
     Tweets_List *user_tweets = CreateTweetList();
     User_List *user_following = Create_User_List();
+    int i = 0;
+    char *hashed_pwd = hash_password(pwd);
 
     if (!user) {
         exit(1);
@@ -166,7 +178,7 @@ void add_to_table(char *user, char *pwd, Hash_Table *table) {
     new_user->Handle = malloc(strlen(user)+1);
     new_user->Password = malloc(strlen(pwd)+1);
     strcpy(new_user->Handle, user);
-    strcpy(new_user->Password, pwd); /* todo hashing */
+    strcpy(new_user->Password, hashed_pwd); /* todo hashing */
     new_user->Tweets = user_tweets;
 
     add_User_Node(user_following, new_user);
@@ -174,12 +186,17 @@ void add_to_table(char *user, char *pwd, Hash_Table *table) {
     new_user->Following = user_following;
 
     add_elem(table, new_user);
+
+    printf("contraseña hasheada: ");
+    while (i < strlen(pwd)) {
+        printf("%c", hashed_pwd[i]);
+        i++;
+    }
+    printf(".\n");
 }
 
 /* shows user feed */
 void show_user_feed(User *user, Tweets_List *list) {
-    printf("Timeline of @%s.\n", user->Handle);
-    printf("\n------------------------\n");
 
     Tweet_Node *curr_node_twt_list;
     User_Node *curr_node_follow_list;
@@ -189,12 +206,15 @@ void show_user_feed(User *user, Tweets_List *list) {
     user_follow_list = user->Following;
     curr_node_twt_list = list->Tail;
 
+    printf("Timeline of @%s.\n", user->Handle);
+    printf("\n------------------------\n");
+
     /* find every tweet such that tweet.username is in user.followgin */
     while (curr_node_twt_list != NULL) {
         /* username of the curr twt */
         username = curr_node_twt_list->Tweet->Username;
 
-        curr_node_follow_list = user_follow_list->Tail;
+        curr_node_follow_list = user_follow_list->Head;
         while (curr_node_follow_list != NULL) {
             if (strcmp(username, curr_node_follow_list->User->Handle) == 0) {
                 printf("\n@%s: \"%s\"\n",
@@ -229,35 +249,32 @@ int user_verify(char *user, Hash_Table *table) {
 
 
 /*  add a new tweet to user tweet list.
-
     args: *user -> user to add a new tweet in its list
           *twt_list -> list that stores every twt.
-
     returns:
         none
 */
 void add_tweet(User *user, Tweets_List *twt_list) {
     Tweet *new_tweet;
-    Tweet_Node *new_tweet_node;
+    Tweet_Node *new_tweet_node_global;
+    Tweet_Node *new_tweet_node_user;
 
     printf("New Tweet: ");
 
     new_tweet = create_tweet(user->Handle);
-    new_tweet_node = CreateTweetNode(new_tweet);
+    new_tweet_node_global = CreateTweetNode(new_tweet);
+    new_tweet_node_user = CreateTweetNode(new_tweet);
 
-    InsertTweetNode(new_tweet_node, twt_list);
-    InsertTweetNode(new_tweet_node, user->Tweets);
+    InsertTweetNode(new_tweet_node_global, twt_list);
+    InsertTweetNode(new_tweet_node_user, user->Tweets);
 }
 
 /*  add a new follower to user.following list
-
     args:
         *user -> user to add a new following user.
         *table -> table that stores every user
-
     returns:
         none
-
 */
 void follow_user(User *user, Hash_Table *table) {
     char *user_to_find, *option;
@@ -285,7 +302,7 @@ void follow_user(User *user, Hash_Table *table) {
 
             if (strcmp(option, "follow") == 0 || strcmp(option, "FOLLOW") == 0) {
                 add_User_Node(user->Following, hash_search(table, user_to_find));
-                printf("Now you follow @%s", user_to_find);
+                printf("Now you follow @%s!\n", user_to_find);
                 flag = 1;
 
             } else if (strcmp(option, "leave") == 0 || strcmp(option, "LEAVE") == 0) {
@@ -297,7 +314,7 @@ void follow_user(User *user, Hash_Table *table) {
             }
         } while(flag != 1);
     } else {
-        printf("User @%s doesn\'t exist", user_to_find);
+        printf("User @%s doesn\'t exist\n", user_to_find);
     }
 
     free(user_to_find);
@@ -346,4 +363,28 @@ Tweet *create_tweet(char *username) {
 void print_tweet(Tweet *tweet) {
     printf("\n@%s: \"%s\"\n", tweet->Username, tweet->Tweet);
     printf("(%s)\n", tweet->TimeStamp);
+}
+
+
+/**
+ * Función para hacer hashing de una contraseña.
+ * Se toma el largo del string y se hace X mod length
+ * siendo X el ascii de cada caracter del string.
+ * Luego, cada valor restante se transforma nuevamente
+ * en un caracter y se guarda un string.
+ * 
+ * Posteriormente, asigna ese hash a la contraseña del usuario.
+*/
+char *hash_password(char *password) {
+    int length = strlen(password);
+    char *hashed = malloc(length);
+    int i = 0;
+
+    while (i < length) {
+        int ascii_value = (int) password[i];
+        hashed[i] = (char) ((ascii_value % length) + 33);
+        i++;
+    }
+
+    return(hashed);
 }

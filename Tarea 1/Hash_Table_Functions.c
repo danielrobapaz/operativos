@@ -56,7 +56,7 @@ User *hash_search(Hash_Table *table, char *handle) {
     User_List *list = &(table->list_array[hash_val]);
     User_Node *tmp = list->Head;
 
-    while (strcmp((*tmp->User).Handle, handle)) {
+    while (strcmp((tmp->User)->Handle, handle)) {
         tmp = tmp->Next;
     }
 
@@ -86,7 +86,6 @@ void hash_table_init(Hash_Table *table) {
     add_elem(&table, &usr1);
     add_elem(&table, &usr2);
     add_elem(&table, &usr3);
-
     int i;
     printf("Prueba iteración sobre tabla de hash\n");
     for (i = 0; i < 20; i++) {
