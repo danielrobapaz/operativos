@@ -81,8 +81,9 @@ int main() {
                         follow_user(logged_user, &Users_Table);
 
                     } else if (!strcmp(prompt, "mentions") || !strcmp(prompt, "MENTIONS")) { 
+                        system("clear");
                         find_user_mentions(logged_user->Handle, Tweet_List);
-                        /*Quick-Fix para el clear, se pide al usuario que presione un boton antes de borrar*/
+                        /*Quick-Fix para el clear que no dejaba ver mentions, se pide al usuario que presione un boton antes de borrar*/
                         printf("Presione cualquier botón para continuar...");
                         fflush(stdout);
                         system("read -sn 1");
@@ -114,7 +115,7 @@ int main() {
                     fgets(desc_prompt, MAXDESCSIZE - 2, stdin);
                 }
                 else {
-                    desc_prompt = "No description.";
+                    strcpy(desc_prompt, "No description.");
                 }
                 /* create a new hash entry */
                 add_to_table(user, pswd, desc_prompt, &Users_Table);
